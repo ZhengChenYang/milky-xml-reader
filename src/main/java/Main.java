@@ -37,11 +37,11 @@ public class Main {
             Node node = nl.item(i);
             if(node instanceof Element){
                 Element ele = (Element) node;
-                if(delegate.isDefaultNamespace(ele)){
+                if(delegate.isDefaultElement(ele)){
                     parseDefaultElement(ele, delegate);
                 }
                 else{
-                    delegate.parseCustomElement(ele);
+                    delegate.parseCustomElements(ele, null);
                 }
             }
         }
@@ -49,7 +49,11 @@ public class Main {
 
     private static void parseDefaultElement(Element ele, BeanDefinitionParserDelegate delegate) {
         if(ele.getTagName().equals("bean")){
-            delegate.parseBeanDefinitionElement(ele);
+            try {
+                delegate.parseBeanDefinitionElement(ele);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
     }
 }

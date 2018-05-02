@@ -1,11 +1,9 @@
-import jdk.internal.org.objectweb.asm.tree.analysis.Value;
-import org.springframework.context.annotation.Bean;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
-import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Created by lenovo on 2018/4/28.
@@ -31,9 +29,30 @@ public class BeanDefinitionParserDelegate {
 
     private static final String KEY_ATTRIBUTE = "key";
 
+    private static final String NAME_ATTRIBUTE = "name";
 
     private static final String BEAN_ATTRIBUTE = "bean";
 
+    private Set<String> defautTagNameSet = new HashSet<String>();
+
+    public BeanDefinitionParserDelegate(){
+        defautTagNameSet.add(ID_ATTRIBUTE);
+        defautTagNameSet.add(CLASS_ATTRIBUTE);
+        defautTagNameSet.add(CONSTRUCTOR_ARG_ATTRIBUTE);
+        defautTagNameSet.add(INDEX_ATTRIBUTE);
+        defautTagNameSet.add(VALUE_ATTRIBUTE);
+        defautTagNameSet.add(TYPE_ATTRIBUTE);
+        defautTagNameSet.add(REF_ATTRIBUTE);
+        defautTagNameSet.add(ARRAY_ATTRIBUTE);
+        defautTagNameSet.add(LIST_ATTRIBUTE);
+        defautTagNameSet.add(SET_ATTRIBUTE);
+        defautTagNameSet.add(MAP_ATTRIBUTE);
+        defautTagNameSet.add(VALUE_TYPE_ATTRIBUTE);
+        defautTagNameSet.add(KEY_TYPE_ATTRIBUTE);
+        defautTagNameSet.add(KEY_ATTRIBUTE);
+        defautTagNameSet.add(NAME_ATTRIBUTE);
+        defautTagNameSet.add(BEAN_ATTRIBUTE);
+    }
 
     public boolean isDefaultNamespace(Element ele) {
         return ele.isDefaultNamespace(BEANS_NAMESPACE_URI);
@@ -41,7 +60,6 @@ public class BeanDefinitionParserDelegate {
 
     public void parseBeanDefinitionElement(Element ele) throws Exception {
         String id = ele.getAttribute(ID_ATTRIBUTE);
-
         String className = null;
         BeanDefinition bd = new BeanDefinition();
         //解析class属性
@@ -52,13 +70,65 @@ public class BeanDefinitionParserDelegate {
         // TODO set id in beanDefinition
         // TODO set className in beanDefinition
 
+        //解析默认属性值
+
         //解析构造函数参数
         parseConstructorArgElements(ele, bd);
+    
+        // 解析属性值
+        parsePropertyElements(ele, bd);
 
+        //解析自定义标签
+        parseCustomElements(ele, bd);
+    }
+
+    private void parsePropertyElements(Element beanEle, BeanDefinition bd) throws Exception {
+        NodeList nl = beanEle.getChildNodes();
+        for (int i = 0; i < nl.getLength(); i++) {
+            Node node = nl.item(i);
+            if (((Element)node).getTagName().equals("property")) {
+                parsePropertyElement((Element) node, bd);
+            }
+        }
+    }
+
+    private Object parsePropertyElement(Element ele, BeanDefinition bd) throws Exception {
+        String propertyName = ele.getAttribute(NAME_ATTRIBUTE);
+        Object val = null;
+
+        NodeList nl = ele.getChildNodes();
+        Element subElement = null;
+        for (int i = 0; i < nl.getLength(); i++) {
+            Node node = nl.item(i);
+            if (node instanceof Element) {
+                if (subElement != null) {
+                    throw new Exception(" must not contain more than one sub-element");
+                } else {
+                    subElement = (Element) node;
+                }
+            }
+        }
+        boolean hasRefAttribute = ele.hasAttribute(REF_ATTRIBUTE);
+        boolean hasValueAttribute = ele.hasAttribute(VALUE_ATTRIBUTE);
+        if (hasRefAttribute) {
+
+        }
+        else if (hasValueAttribute) {
+
+        }
+        else if (subElement != null) {
+            return parsePropertySubElement(subElement, bd);
+        }
+        //PropertyValue pv = new PropertyValue(propertyName, val);
+        return val;
+    }
+
+    public void parseCustomElements(Element ele) {
 
     }
 
-    public void parseCustomElement(Element ele) {
+    public void parseCustomElements(Element ele, BeanDefinition bd) {
+
     }
 
     public Object parseCustomElement(Element ele, BeanDefinition bd){
@@ -81,17 +151,17 @@ public class BeanDefinitionParserDelegate {
         String indexAttr = ele.getAttribute(INDEX_ATTRIBUTE);
         String typeAttr = ele.getAttribute(TYPE_ATTRIBUTE);
         String refAttr = ele.getAttribute(REF_ATTRIBUTE);
-        if(typeAttr!=null){
-            parsePropertyValue(ele, bd);
 
-        }
+        Object value = parsePropertyValue(ele, bd);
+
 
     }
 
-    private void parsePropertyValue(Element ele, BeanDefinition bd) throws Exception {
+    private Object  parsePropertyValue(Element ele, BeanDefinition bd) throws Exception {
 
         NodeList nl = ele.getChildNodes();
         Element subElement = null;
+        Object value = null;
         for(int i=0; i<nl.getLength(); i++){
             Node node = nl.item(i);
             if(subElement!=null){
@@ -104,14 +174,18 @@ public class BeanDefinitionParserDelegate {
 
         if(ele.hasAttribute(REF_ATTRIBUTE)){
             // TODO set ref in bd
+            // valueHolder.setRef()
         }
         else if(ele.hasAttribute(VALUE_ATTRIBUTE)){
             // TODO set value in bd
+            // valueHolder.setValue()
         }
         else if(subElement!=null){
-            Object value = parsePropertySubElement(subElement, bd);
+            value = parsePropertySubElement(subElement, bd);
             // TODO set the value in bd
+            // valueHolder.setRef()
         }
+        return value;
 
     }
 
@@ -119,7 +193,7 @@ public class BeanDefinitionParserDelegate {
         if(!isDefaultNamespace(ele)){
             return parseCustomElement(ele, bd);
         }
-        String nodeName = ele.getTagName();
+        String nodeName = ele.getTagName().toLowerCase();
         if(nodeName.equals(LIST_ATTRIBUTE)){
             return parseListElement(ele, bd);
         }
@@ -199,4 +273,10 @@ public class BeanDefinitionParserDelegate {
         }
         return managedList;
     }
+
+    public boolean isDefaultElement(Element ele) {
+        String tagName = ele.getTagName().trim().toLowerCase();
+        return this.defautTagNameSet.contains(tagName);
+    }
+
 }
